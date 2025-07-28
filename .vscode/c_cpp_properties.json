@@ -1,0 +1,30 @@
+{
+    "configurations": [
+        {
+            "name": "MinGW-GCC-14.2.0",
+            "intelliSenseMode": "windows-gcc-x64",
+            "compilerPath": "E:/msys64/mingw64/bin/g++.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "includePath": [
+                // 工作区
+                "${workspaceFolder}/**",
+                // SFML
+                "D:/Libraries/SFML-2.5.1/include/**",
+                
+                "E:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/../../../../include/c++/14.2.0",
+                "E:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/../../../../include/c++/14.2.0/x86_64-w64-mingw32",
+                "E:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/../../../../include/c++/14.2.0/backward",
+                "E:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include",
+                "E:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/../../../../include",
+                "E:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include-fixed"
+            ]
+        }
+    ],
+    "version": 4
+}

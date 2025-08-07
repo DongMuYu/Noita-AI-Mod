@@ -5,10 +5,15 @@ D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\core\SafetyChecker.cp
 D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\core\UI.cpp;D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\build\aiDev.dir\Release\UI.obj
 D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\core\Map.cpp;D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\build\aiDev.dir\Release\Map.obj
 D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\core\Renderer.cpp;D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\build\aiDev.dir\Release\Renderer.obj
+D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\core\Time.cpp;D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\build\aiDev.dir\Release\Time.obj
 D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\entity\Player.cpp;D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\build\aiDev.dir\Release\Player.obj
 D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\entity\Enemy.cpp;D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\build\aiDev.dir\Release\Enemy.obj
 D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\entity\Bullet.cpp;D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\build\aiDev.dir\Release\Bullet.obj
 D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\physics\Collision.cpp;D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\build\aiDev.dir\Release\Collision.obj
 D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\ai\pathfinding\RayCasting.cpp;D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\build\aiDev.dir\Release\RayCasting.obj
+D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\ai\controller\AIController.cpp;D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\build\aiDev.dir\Release\AIController.obj
+D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\ai\controller\DataCollector.cpp;D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\build\aiDev.dir\Release\DataCollector.obj
+D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\ai\trainer\RLTrainer\RLTrainer.cpp;D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\build\aiDev.dir\Release\RLTrainer.obj
+D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\ai\trainer\SLTrainer\SLTrainer.cpp;D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\build\aiDev.dir\Release\SLTrainer.obj
 D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\scene\GameScene.cpp;D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\build\aiDev.dir\Release\GameScene.obj
 D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\world\Parser.cpp;D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\build\aiDev.dir\Release\Parser.obj

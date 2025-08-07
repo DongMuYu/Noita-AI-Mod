@@ -30,7 +30,7 @@ RayCasting::RayCasting() {}
  */
 std::vector<RayHitInfo> RayCasting::castRays(const sf::Vector2f& origin, 
                                              const std::vector<std::string>& levelData,
-                                             int raysPerQuadrant) {
+                                             int raysPerQuadrant) const {
     std::vector<RayHitInfo> results;
     
     // 空关卡直接返回空结果
@@ -62,7 +62,7 @@ std::vector<RayHitInfo> RayCasting::castRays(const sf::Vector2f& origin,
             sf::Vector2f direction(std::cos(angle), std::sin(angle));
             
             // 投射单条射线并收集结果
-            RayHitInfo hit = castSingleRay(origin, direction, levelData);
+            RayHitInfo hit = const_cast<RayCasting*>(this)->castSingleRay(origin, direction, levelData);
             results.push_back(hit);
         }
     }
@@ -152,7 +152,7 @@ bool RayCasting::isObstacle(const std::vector<std::string>& levelData, int x, in
     char cell = levelData[y][x];
     
     // '1'表示普通障碍物，'M'表示特殊障碍物
-    return (cell == '1' || cell == 'M'); // 可根据需要扩展更多障碍物类型
+    return (cell == '1' || cell == 'M' || cell == 'W' || cell == '3' || cell == '4'); // 可根据需要扩展更多障碍物类型
 }
 
 /**
@@ -193,8 +193,8 @@ void RayCasting::drawRays(sf::RenderWindow& window, const std::vector<RayHitInfo
             int tileY = static_cast<int>(ray.hitPoint.y / TILE);
             
             // 避免重复绘制同一个瓦片
-            if (hitTiles.find({tileX, tileY}) == hitTiles.end()) {
-                hitTiles.insert({tileX, tileY});
+            if (hitTiles.find(std::make_pair(static_cast<int>(tileX), static_cast<int>(tileY))) == hitTiles.end()) {
+                hitTiles.insert(std::make_pair(static_cast<int>(tileX), static_cast<int>(tileY)));
                 
                 // 创建黄色半透明矩形表示被命中的瓦片
                 sf::RectangleShape tileRect(sf::Vector2f(TILE, TILE));

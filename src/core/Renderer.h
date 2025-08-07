@@ -147,6 +147,14 @@ private:
      * @brief 渲染玩家出生点标记
      */
     void renderPlayerSpawnPoint(sf::RenderWindow& window, UI& ui, sf::Vector2f& position);
+    
+    /**
+     * @brief 渲染墙标记
+     * @param window SFML渲染窗口
+     * @param map 地图对象
+     * @param wallMap 墙标记信息
+     */
+    void renderWallMarkers(sf::RenderWindow& window, Map& map, const std::vector<std::string>& wallMap);
 
     // 成员变量
     sf::Font font;

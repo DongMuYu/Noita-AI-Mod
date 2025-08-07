@@ -39,4 +39,13 @@ namespace Parser {
      * 5. 如果解析失败，返回空向量
      */
     std::vector<std::string> parseLevel();
+    
+    /**
+     * @brief 检测地图中的墙结构
+     * @param map 地图瓦片数组
+     * @return 返回墙的标记信息，每个字符代表对应位置的墙标记状态
+     * @details 墙的定义：竖直方向上堆叠的连续方块，具有至少一面无阻挡的垂直面
+     * 被标记为墙部分的方块将用于渲染时的青色标记
+     */
+    std::vector<std::string> detectWalls(const std::vector<std::string>& map);
 }

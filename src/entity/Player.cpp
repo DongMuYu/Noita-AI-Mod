@@ -11,15 +11,12 @@ Player::Player(sf::Vector2f pos) : Entity("player", pos, TILE * 0.8f, TILE * 0.8
     energyConsumptionRate = 100.0f; // 每秒消耗能量
     energyRegenRate = 500.0f; // 每秒恢复能量
     isFlying = false;
+
 }
 
 // 更新函数: 应用重力并移动玩家
 // 参数: dt - 时间增量(秒)
 void Player::update(float dt){
-
-    // 更新跳跃冷却
-    if(jumpCooldown > 0) jumpCooldown -= dt;
-    
 
     // 飞行能量管理
     // 检查是否在飞行（不在地面上且向上移动）
@@ -50,35 +47,34 @@ void Player::update(float dt){
     // Entity::update(dt);
 }
 
-// 处理玩家输入
-// 参数: dt - 时间增量(秒)
-void Player::handleInput(float dt) {
-    // 初始化方向向量(默认为零向量)
-    // dir.x: 水平方向(-1=左, 1=右), dir.y: 垂直方向(-1=上, 1=下)
-    sf::Vector2f dir{0, 0};
+void Player::handleInput(float dt, bool aiMode, float aiMoveX, bool aiUseEnergy) {
+    sf::Vector2f newVelocity = getVelocity();
     
-    // 检测水平移动输入
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) dir.x -= 1;  // A键: 向左移动
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) dir.x += 1;  // D键: 向右移动
-    
-    // 标准化水平方向(确保对角线移动速度不会快于直线移动)
-    if (dir.x != 0) dir.x = dir.x > 0 ? 1.f : -1.f;  // 将非零水平方向标准化为±1
-    
-    // 更新水平速度
-    sf::Vector2f newVelocity = getVelocity();  // 获取当前速度
-    newVelocity.x = dir.x * MOVE_SPEED;              // 设置水平速度 = 方向 × 移动速度常量
-    setVelocity(newVelocity);                 // 应用新速度到玩家对象
-
-    // 检测上升/飞行输入(W键)
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
-        sf::Vector2f newVelocity = getVelocity();  // 获取当前速度
-        // 检查是否有足够能量进行飞行
-        if (getCurrentEnergy() > 0) {
-            // 设置垂直速度 = -跳跃速度 × 0.45(飞行模式减速系数)
+    if (aiMode) {
+        // AI控制模式：使用AI输入
+        newVelocity.x = aiMoveX * MOVE_SPEED;
+        
+        if (aiUseEnergy && getCurrentEnergy() > 0) {
             newVelocity.y = -JUMP_VELOCITY * 0.45f;
-            setVelocity(newVelocity);                 // 应用新速度到玩家对象
+        }
+    } else {
+        // 键盘控制模式
+        sf::Vector2f dir{0, 0};
+        
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) dir.x -= 1;
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) dir.x += 1;
+        
+        if (dir.x != 0) dir.x = dir.x > 0 ? 1.f : -1.f;
+        newVelocity.x = dir.x * MOVE_SPEED;
+        
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
+            if (getCurrentEnergy() > 0) {
+                newVelocity.y = -JUMP_VELOCITY * 0.45f;
+            }
         }
     }
+    
+    setVelocity(newVelocity);
 }
  
 

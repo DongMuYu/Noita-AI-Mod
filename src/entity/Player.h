@@ -39,11 +39,7 @@ public:
      */
     void update(float dt) override;
     
-    /**
-     * @brief 处理玩家输入
-     * @param dt 时间增量（秒）
-     */
-    void handleInput(float dt);
+    void handleInput(float dt, bool aiMode = false, float aiMoveX = 0.0f, bool aiUseEnergy = false);
     
     // Getters
     /** @brief 获取当前能量值 */
@@ -51,5 +47,8 @@ public:
     
     /** @brief 获取最大能量值 */
     float getMaxEnergy() const { return maxEnergy; }
+    
+    /** @brief 获取飞行状态 */
+    bool getIsFlying() const { return isFlying; }
     
 };

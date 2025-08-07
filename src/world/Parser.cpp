@@ -58,7 +58,7 @@ WalkResult drunkardsWalkWithPositions(int w, int h, int steps) {
     
     for (int i = 0; i < steps; ++i) {
         m[y][x] = PATH;
-        pathPositions.emplace_back(x, y);
+        pathPositions.push_back(std::make_pair(static_cast<int>(x), static_cast<int>(y)));
         
         int dir = std::uniform_int_distribution<int>(0, 3)(rng);
         switch (dir) {
@@ -70,30 +70,30 @@ WalkResult drunkardsWalkWithPositions(int w, int h, int steps) {
     }
     
     // 从随机路径中随机选择玩家和目标位置
-    std::pair<int, int> playerPos, targetPos;
+    std::pair<int, int> playerPos{0, 0}, targetPos{0, 0};
     
     if (!pathPositions.empty()) {
         // 随机选择玩家位置
-        int playerIndex = std::uniform_int_distribution<int>(0, (int)pathPositions.size()-1)(rng);
+        int playerIndex = std::uniform_int_distribution<int>(0, static_cast<int>(pathPositions.size())-1)(rng);
         playerPos = pathPositions[playerIndex];
-        cout << "Parser : Player: (" << playerPos.first << ", " << playerPos.second << ")" << endl;
+        // cout << "Parser : Player: (" << playerPos.first << ", " << playerPos.second << ")" << endl;
         
         // 随机选择目标位置，排除玩家位置
         std::vector<std::pair<int, int>> availableTargets;
         for (const auto& pos : pathPositions) {
             if (pos != playerPos) {
-                availableTargets.push_back(pos);
+                availableTargets.push_back(std::make_pair(static_cast<int>(pos.first), static_cast<int>(pos.second)));
             }
         }
         
         if (!availableTargets.empty()) {
-            int targetIndex = std::uniform_int_distribution<int>(0, (int)availableTargets.size()-1)(rng);
+            int targetIndex = std::uniform_int_distribution<int>(0, static_cast<int>(availableTargets.size())-1)(rng);
             targetPos = availableTargets[targetIndex];
         } else {
             // 如果所有位置都被玩家位置占用，使用备用位置
             targetPos = {playerPos.first + 1, playerPos.second + 1};
         }
-        cout << "Parser : Target: (" << targetPos.first << ", " << targetPos.second << ")" << endl;
+        // cout << "Parser : Target: (" << targetPos.first << ", " << targetPos.second << ")" << endl;
 
     } else {
         // 如果没有路径位置，使用中心附近的安全位置
@@ -169,16 +169,16 @@ std::vector<std::string> generateRandomMap(float difficulty) {
         // 放置实体标记
         map[pos.second][pos.first] = marker;
         
-        std::cout << "[DEBUG] " << (marker == PLAYER ? "Player" : "Target") 
-                  << " original: (" << originalX << ", " << originalY 
-                  << ") final: (" << pos.first << ", " << pos.second << ")\n";
+            // std::cout << "[DEBUG] " << (marker == PLAYER ? "Player" : "Target") 
+        //           << " original: (" << originalX << ", " << originalY 
+        //           << ") final: (" << pos.first << ", " << pos.second << ")\n";
     };
     
     placeEntity(playerPos, PLAYER);
     placeEntity(targetPos, TARGET);
     
-    std::cout << "[DEBUG] After placeEntity - Player at (" << playerPos.first << "," << playerPos.second 
-              << ") Target at (" << targetPos.first << "," << targetPos.second << ")" << std::endl;
+        // std::cout << "[DEBUG] After placeEntity - Player at (" << playerPos.first << "," << playerPos.second 
+        //           << ") Target at (" << targetPos.first << "," << targetPos.second << ")" << std::endl;
     
     // 验证P和T是否正确放置
     bool hasPlayer = false, hasTarget = false;
@@ -201,7 +201,7 @@ std::vector<std::string> generateRandomMap(float difficulty) {
               << ") T found at (" << targetX << "," << targetY << ")" << std::endl;
     
     if (!hasPlayer || !hasTarget) {
-        std::cout << "\033[31m[ERROR] Parser : Map validation failed - P:" << hasPlayer << " T:" << hasTarget << "\033[0m" << std::endl;
+            // std::cout << "\033[31m[ERROR] Parser : Map validation failed - P:" << hasPlayer << " T:" << hasTarget << "\033[0m" << std::endl;
         // 强制在中心放置
         if (!hasPlayer) {
             map[H/2][W/2] = PLAYER;
@@ -213,8 +213,8 @@ std::vector<std::string> generateRandomMap(float difficulty) {
         }
     }
     
-    std::cout << "\033[34m[DEBUG] Parser : Final map validation - P:" << playerPos.first << "," << playerPos.second 
-              << " T:" << targetPos.first << "," << targetPos.second << "\033[0m" << std::endl;
+        // std::cout << "\033[34m[DEBUG] Parser : Final map validation - P:" << playerPos.first << "," << playerPos.second 
+        //           << " T:" << targetPos.first << "," << targetPos.second << "\033[0m" << std::endl;
 
     // 统一设置边界墙
     auto setBoundaryWalls = [&](std::vector<std::string>& m) {
@@ -253,23 +253,139 @@ std::vector<std::string> generateRandomMap(float difficulty) {
         }
     }
     
-    std::cout << "\033[33m[INFO] Parser(Final) : Map generation complete - P:" << (finalHasPlayer||true) 
-              << " T:" << (finalHasTarget||true) << "\033[0m" << std::endl;
+        // std::cout << "\033[33m[INFO] Parser(Final) : Map generation complete - P:" << (finalHasPlayer||true) 
+        //           << " T:" << (finalHasTarget||true) << "\033[0m" << std::endl;
+
+    // 检测并标记墙结构
+    auto wallMap = detectWalls(map);
+    
+    // 将墙标记合并到原始地图中
+    for (int y = 0; y < H; ++y) {
+        for (int x = 0; x < W; ++x) {
+            if (wallMap[y][x] == 'W' || wallMap[y][x] == '3' || wallMap[y][x] == '4') {
+                map[y][x] = wallMap[y][x];  // 用'W', '3', '4'标记墙结构
+            }
+        }
+    }
 
     return map;
 }
 
+/*================ 墙检测函数 ================*/
+
+/**
+ * 检测地图中的墙结构
+ * 墙的定义：竖直方向上堆叠的连续方块，具有至少一面无阻挡的垂直面
+ */
+std::vector<std::string> detectWalls(const std::vector<std::string>& map) {
+    if (map.empty()) return {};
+    
+    int width = map[0].size();
+    int height = map.size();
+    
+    // 创建结果数组，初始化为空
+    std::vector<std::string> wallMap(height, std::string(width, ' '));
+    
+    // 遍历每一列
+    for (int x = 0; x < width; ++x) {
+        int startY = 0;
+        
+        while (startY < height) {
+            // 寻找下一个墙方块（'1'）
+            while (startY < height && map[startY][x] != WALL) {
+                ++startY;
+            }
+            
+            if (startY >= height) break;
+            
+            // 找到了墙方块，检查是否可以作为墙的起始点
+            bool leftBlocked = (x == 0) || (x > 0 && map[startY][x-1] == WALL);
+            bool rightBlocked = (x == width-1) || (x < width-1 && map[startY][x+1] == WALL);
+            
+            // 如果两面都被阻挡，跳过这个方块
+            if (leftBlocked && rightBlocked) {
+                ++startY;
+                continue;
+            }
+            
+            // 至少有一面是开放的，开始寻找连续的墙
+            int wallStart = startY;
+            int wallEnd = startY;
+            
+            // 确定墙的方向（左开放还是右开放）
+            bool leftOpen = !leftBlocked;
+            bool rightOpen = !rightBlocked;
+            
+            // 向下寻找连续的墙方块
+            while (wallEnd + 1 < height) {
+                if (map[wallEnd + 1][x] != WALL) {
+                    break;  // 不再是墙方块
+                }
+                
+                // 检查下一层是否符合相同的开放条件
+                bool nextLeftBlocked = (x == 0) || (x > 0 && map[wallEnd + 1][x-1] == WALL);
+                bool nextRightBlocked = (x == width-1) || (x < width-1 && map[wallEnd + 1][x+1] == WALL);
+                
+                bool nextLeftOpen = !nextLeftBlocked;
+                bool nextRightOpen = !nextRightBlocked;
+                
+                // 如果原来两边都开放，检查是否变成单边开放
+                if (leftOpen && rightOpen) {
+                    // 两边原来都开放
+                    if (!nextLeftOpen && !nextRightOpen) {
+                        // 两边都变成阻挡，停止
+                        break;
+                    } else if (nextLeftOpen && !nextRightOpen) {
+                        // 右边变成阻挡，只关注左边
+                        rightOpen = false;
+                    } else if (!nextLeftOpen && nextRightOpen) {
+                        // 左边变成阻挡，只关注右边
+                        leftOpen = false;
+                    }
+                    // 如果两边都还开放，继续两边都关注
+                } else {
+                    // 原来只有一边开放，检查是否保持开放
+                    if (leftOpen && !nextLeftOpen) {
+                        break;  // 左边不再开放
+                    }
+                    if (rightOpen && !nextRightOpen) {
+                        break;  // 右边不再开放
+                    }
+                }
+                
+                ++wallEnd;
+            }
+            
+            // 只有当连续方块数量大于1时才标记为墙
+            if (wallEnd - wallStart + 1 > 1) {
+                // 标记墙的首方块为'3'，尾方块为'4'，中间为'W'
+                wallMap[wallStart][x] = '3';  // 首方块
+                wallMap[wallEnd][x] = '4';    // 尾方块
+                
+                // 中间方块标记为'W'（如果有中间方块的话）
+                for (int y = wallStart + 1; y < wallEnd; ++y) {
+                    wallMap[y][x] = 'W';
+                }
+            }
+            
+            // 继续搜索下一部分
+            startY = wallEnd + 1;
+        }
+    }
+    
+    return wallMap;
+}
 
 
 /*================ 对外接口 =================*/
-static float currentDifficulty = 0.01f;
+static float currentDifficulty = 0.005f;
 
 std::vector<std::string> parseLevel() {
     return generateRandomMap(currentDifficulty);
 }
 
 void nextLevel() {
-    currentDifficulty = std::min(currentDifficulty + 0.0001f, 4.0f);
+    currentDifficulty = std::min(currentDifficulty + 0.005f, 4.0f);
 }
 
 } // namespace Parser

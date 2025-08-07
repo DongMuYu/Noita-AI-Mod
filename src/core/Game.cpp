@@ -1,11 +1,41 @@
 // Game.cpp
 
+/*
+ * 按键功能说明
+ * 
+ * 玩家控制按键（键盘模式）：
+ * - A键：向左移动（速度：160像素/秒）
+ * - D键：向右移动（速度：160像素/秒）
+ * - W键：上升/飞行（消耗能量，跳跃初速度：400像素/秒）
+ * 
+ * 游戏功能按键：
+ * - F键：暂停/继续游戏（切换暂停状态）
+ * - P键：切换AI控制模式（开启/关闭AI自动控制）
+ * - R键：切换射线调试显示（显示/隐藏射线检测可视化）
+ * - B键：切换数据收集功能（开启/关闭训练数据记录）
+ * 
+ * AI控制参数：
+ * - AI水平移动：由AI控制器决定（范围：-1.0到1.0，乘以MOVE_SPEED）
+ * - AI能量使用：由AI控制器决定（布尔值，决定是否消耗能量上升）
+ * 
+ * 物理常量：
+ * - 重力加速度：1350像素/秒²
+ * - 最大下落速度：由游戏逻辑限制
+ * - 能量系统：最大能量150，消耗速率100单位/秒，地面恢复速率500单位/秒
+ * 
+ * 游戏世界尺寸：
+ * - 地图宽度：90瓦片 × 15像素/瓦片 = 1350像素
+ * - 地图高度：90瓦片 × 15像素/瓦片 = 1350像素
+ * - 瓦片尺寸：15×15像素
+ */
+
 #include "Game.h"
 #include "../physics/Collision.h"
 #include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <filesystem>
 #include "../world/Parser.h"
 
 using namespace std;
@@ -33,34 +63,37 @@ Game::Game()
     // 初始化调试标志
     showRayDebug = false;
     paused = false;
-    totalPausedTime = 0.0f;
     
-    // 设置文本样式（使用渲染器中的字体）
-    timerText.setFont(renderer.getFont());
-    fpsText.setFont(renderer.getFont());
-    timerText.setCharacterSize(18);
-    fpsText.setCharacterSize(18);
-    timerText.setFillColor(sf::Color::Red);
-    fpsText.setFillColor(sf::Color::Blue);
+    // 初始化数据收集器
+    dataCollector.setRecordingEnabled(false);
+    std::cout << "[DEBUG] Data collection initialized and disabled" << std::endl;
     
-    // 初始化玩家到终点的连接线
-    playerTargetLine.setPrimitiveType(sf::Lines);
-    playerTargetLine.resize(2); // 两个顶点：起点(玩家)和终点(目标)
+    // 尝试加载已有的数据
+    std::string dataPath = "D:\\steam\\steamapps\\common\\Noita\\mods\\NoitaCoreAI\\aiDev\\data\\collected_data.bin";
+    if (std::filesystem::exists(dataPath)) {
+        std::cout << "[DEBUG] Loading existing data from " << dataPath << std::endl;
+        dataCollector.loadEpisodeData(dataPath);
+        std::cout << "[DEBUG] Loaded " << dataCollector.getTotalEpisodes() << " existing episodes" << std::endl;
+    } else {
+        std::cout << "[DEBUG] No existing data found, starting fresh collection" << std::endl;
+    }
+    
+    // 初始化AI控制器并加载模型
+    aiController.loadModel("d:/steam/steamapps/common/Noita/mods/NoitaCoreAI/aiDev/models/trained_model.bin");
+    std::cout << "[DEBUG] AI controller initialized and model loaded" << std::endl;
+    
+    // 初始化游戏局数计数器
+    totalGamesCount = 0;
 }
 
 /**
  * @brief 游戏类析构函数
  * @details 使用默认实现，自动释放所有成员变量资源
  */
-Game::~Game() = default;
+Game::~Game() {
+    saveCollectedData();
+}
 
-/**
- * @brief 初始化游戏资源
- * @details 解析关卡数据并创建游戏元素：
- * 1. 创建平台瓦片并设置位置和样式
- * 2. 定位玩家初始位置(P标记)
- * 3. 记录目标点位置(T标记)
- */
 /**
  * @brief 初始化游戏资源和关卡数据
  * @details 解析关卡文件，创建瓦片地图，设置玩家初始位置和目标点位置
@@ -82,6 +115,13 @@ void Game::initResources() {
     
     // 注册玩家到安全检查器
     safetyChecker.registerEntity("player", [this]() -> Entity* { return &this->player; });
+    
+    // 开始第一个回合，但默认不收集数据
+    dataCollector.setRecordingEnabled(false);
+    dataCollector.startEpisode();
+    episodeStartTime = 0.0f;
+    episodeFrameCount = 0;
+    std::cout << "[DEBUG] New episode started - Data collection DISABLED by default" << std::endl;
 
 }
 
@@ -102,11 +142,23 @@ void Game::initResources() {
  * @param dt 时间增量(秒)，用于基于时间的输入处理
  */
 void Game::handleInput(float dt) {
-    // 处理窗口事件
     window.handleEvents();
 
-    // 处理玩家输入
-    player.handleInput(dt);
+    // 检查是否由AI控制
+    if (aiMode) {
+        // 普通AI模式 - 使用已训练的模型
+        AIController::Action action = aiController.decideAction(player, map, rayCaster);
+        
+        // 调试输出AI动作信息
+        std::cout << "[AI DEBUG] Move: " << std::fixed << std::setprecision(2) << action.moveX 
+                << " | Fly: (" << action.useEnergy << ")"
+                << " | Action_x: (" << action.moveX << ")"
+                << std::endl;    
+        
+        player.handleInput(dt, true, action.moveX, action.useEnergy);
+    } else {
+        player.handleInput(dt, false);
+    }
     
     // 射线调试开关
     static bool rPressed = false;
@@ -117,6 +169,52 @@ void Game::handleInput(float dt) {
         }
     } else {
         rPressed = false;
+    }
+    
+    
+    
+    // 数据收集开关 - B键控制所有模式的数据收集
+    static bool bPressed = false;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::B)) {
+        if (!bPressed) {
+            bool currentState = dataCollector.isRecordingEnabled();
+            dataCollector.setRecordingEnabled(!currentState);
+            
+            if (!currentState) {
+                // 开启收集时开始新回合
+                dataCollector.startEpisode();
+                episodeStartTime = timeManager.getGameTime();
+                episodeFrameCount = 0;
+                std::cout << "[DATA] Data collection ENABLED" << std::endl;
+            } else {
+                // 关闭收集时结束当前回合
+                dataCollector.endEpisode(false, 0.0f, 0.0f);
+                std::cout << "[DATA] Data collection DISABLED" << std::endl;
+            }
+            bPressed = true;
+        }
+    } else {
+        bPressed = false;
+    }
+    
+    // 强化学习训练模式开关
+    static bool tPressed = false;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::T)) {
+        if (!tPressed) {
+            rlTrainingMode = !rlTrainingMode;
+            
+            if (rlTrainingMode) {
+                // 开启训练模式 - 但不自动启用数据收集
+                std::cout << "[RL TRAINING] Training mode ENABLED" << std::endl;
+                std::cout << "[RL TRAINING] Use B key to enable data collection" << std::endl;
+            } else {
+                // 关闭训练模式
+                std::cout << "[RL TRAINING] Training mode DISABLED" << std::endl;
+            }
+            tPressed = true;
+        }
+    } else {
+        tPressed = false;
     }
 }
 
@@ -141,37 +239,68 @@ void Game::update(float dt) {
     // 计算碰撞后的新位置和速度，并更新地面状态
     handlePlayerPlatformCollision(cd, map.getTiles(), map.getLevelData());
     
-    // 更新玩家状态(碰撞后)
+    // 更新游戏状态(碰撞后)
     player.setPosition(cd.shape.getPosition());      // 更新玩家位置
     player.setVelocity(cd.velocity); // 更新玩家速度
     player.setOnGround(cd.onGround); // 更新地面状态
+    
+    // 增加帧计数
+    episodeFrameCount++;
+
+    // 收集训练数据
+    if (dataCollector.isRecordingEnabled()) {
+        // 监督学习模式 - 使用共享的数据收集器
+        dataCollector.recordCurrentFrame(dataCollector.getCurrentFrameData(player, map, rayCaster));
+        
+        // 更新距离跟踪（从DataCollector内部获取最新距离）
+        sf::Vector2f targetPos = map.getTargetPosition();
+        sf::Vector2f diff = targetPos - player.getPosition();
+        lastDistanceToTarget = std::sqrt(diff.x * diff.x + diff.y * diff.y);
+    }
 
     // 检测玩家是否到达目标点
     sf::Vector2f targetPos = map.getTargetPosition();
     sf::FloatRect targetBounds(targetPos, sf::Vector2f(TILE, TILE));
     if (player.getShape().getGlobalBounds().intersects(targetBounds)) {
+        // 成功完成，记录数据
+        float gameDuration = timeManager.getGameTime() - episodeStartTime;
+        float averageFPS = (gameDuration > 0.0f) ? static_cast<float>(episodeFrameCount) / gameDuration : 0.0f;
+        
+        dataCollector.endEpisode(true, gameDuration, averageFPS);
+        
+        std::cout << "[DEBUG] Episode completed successfully!" << std::endl;
+        std::cout << "[DEBUG] Duration: " << gameDuration << "s, FPS: " << averageFPS 
+                  << ", Energy: " << player.getCurrentEnergy() << std::endl;
+        
         resetLevel();         // 重置关卡状态
         return;
     }
-
+    
     // 边界检查：防止玩家掉落到地图边界外
     // 使用实际地图尺寸进行边界检测（左上角坐标系）
     auto playerBounds = player.getShape().getGlobalBounds();
     
     // 计算实际地图尺寸（像素）
     const auto& levelData = map.getLevelData();
-    float mapWidth = levelData[0].size() * TILE;
-    float mapHeight = levelData.size() * TILE;
-    
     
     // 更新射线检测
     if (showRayDebug) {
         sf::Vector2f playerPos = player.getPosition() + sf::Vector2f(TILE/2, TILE/2);
-        rayHits = rayCaster.castRays(playerPos, map.getLevelData(), 8);
+        rayHits = rayCaster.castRays(playerPos, map.getLevelData());
     }
     
     // 运行时安全检查
     if (safetyChecker.updateEntitySafety("player", map.getLevelData(), map.getTiles(), dt)) {
+        // 安全检查失败，记录数据
+        float gameDuration = timeManager.getGameTime() - episodeStartTime;
+        float averageFPS = (gameDuration > 0.0f) ? static_cast<float>(episodeFrameCount) / gameDuration : 0.0f;
+        
+        dataCollector.endEpisode(false, gameDuration, averageFPS);
+        
+        std::cout << "[DEBUG] Episode ended due to safety check failure!" << std::endl;
+        std::cout << "[DEBUG] Duration: " << gameDuration << "s, FPS: " << averageFPS 
+                  << ", Energy: " << player.getCurrentEnergy() << std::endl;
+        
         resetLevel();
     }
 }
@@ -196,38 +325,128 @@ void Game::render() {
     renderer.setDangerState(playerSafety.isInDanger, playerSafety.dangerTimer);
     
     // 使用新的渲染器接口渲染完整游戏画面
-    renderer.renderMainWindow(mainWindowRef, map, player, ui, gameTime, fps, showRayDebug, rayHits);
+    renderer.renderMainWindow(mainWindowRef, map, player, ui, 
+                             timeManager.getGameTime(), 
+                             static_cast<float>(timeManager.getFPS()), 
+                             showRayDebug, rayHits);
+    
+    // 显示AI模式状态
+    if (rlTrainingMode) {
+        sf::Text rlModeText;
+        rlModeText.setFont(renderer.getFont());
+        rlModeText.setString("RL TRAINING MODE");
+        rlModeText.setCharacterSize(20);
+        rlModeText.setFillColor(sf::Color::Magenta);
+        rlModeText.setPosition(10, 10);
+        mainWindowRef.draw(rlModeText);
+    } else if (aiMode) {
+        sf::Text aiModeText;
+        aiModeText.setFont(renderer.getFont());
+        aiModeText.setString("AI MODE ON");
+        aiModeText.setCharacterSize(20);
+        aiModeText.setFillColor(sf::Color::Green);
+        aiModeText.setPosition(10, 10);
+        mainWindowRef.draw(aiModeText);
+    }
+    
+    
+    
+    // 显示数据收集状态
+    sf::Text dataCollectionText;
+    dataCollectionText.setFont(renderer.getFont());
+    dataCollectionText.setString("Data: " + std::string(dataCollector.isRecordingEnabled() ? "ON" : "OFF"));
+    dataCollectionText.setCharacterSize(14);
+    dataCollectionText.setFillColor(dataCollector.isRecordingEnabled() ? sf::Color::Green : sf::Color::Red);
+    dataCollectionText.setPosition(10, 75);
+    mainWindowRef.draw(dataCollectionText);
 }
 
 /**
- * @brief 游戏主循环
- * @details 控制游戏生命周期的核心函数，实现：
- * 1. 事件处理循环(窗口关闭、键盘输入等)
- * 2. FPS计算与显示更新
- * 3. 游戏状态更新控制(暂停/帧步模式)
- * 4. 固定时间步长的游戏逻辑更新
- * 5. 画面渲染
- * 循环持续到窗口关闭
+ * @brief 重置关卡状态
+ * @details 重置游戏到初始状态，包括地图、玩家位置、时间等
  */
 void Game::resetLevel() {
+    // 结束当前数据收集回合
+    if (episodeFrameCount > 0) {
+        float gameDuration = timeManager.getGameTime() - episodeStartTime;
+        float averageFPS = (gameDuration > 0.0f) ? static_cast<float>(episodeFrameCount) / gameDuration : 0.0f;
+        dataCollector.endEpisode(false, gameDuration, averageFPS);
+    }
+
+    // 增加游戏局数计数
+    totalGamesCount++;
+    
+    // 只有在数据收集启用时才自动保存
+    if (dataCollector.isRecordingEnabled() && totalGamesCount % 5 == 0) {
+        std::cout << "[AUTO-SAVE] Auto-saving data after " << totalGamesCount << " games..." << std::endl;
+        saveCollectedData();
+    }
+
     // 重新初始化地图资源 - 强制重新加载关卡数据
     map.resetMap();
     map.draw(window.getMainWindow());
-    
+
     // 重置安全检查器状态
     safetyChecker.resetEntitySafety("player");
-    
+
+    // 重置距离跟踪
+    lastDistanceToTarget = 0.0f;
+
     // 重新获取玩家初始位置和目标位置
     sf::Vector2f playerPos = map.getPlayerPos();
     sf::Vector2f targetPos = map.getTargetPosition();
-    
+
     player.setPosition(playerPos);
     playerSpawnPosition = playerPos;
+
+    // 重置时间管理器
+    timeManager.reset();
     
-    // 重置秒表
-    gameClock.restart();
-    totalPausedTime = 0.0f;
+    // 只有在数据收集启用时才开始新回合
+    if (dataCollector.isRecordingEnabled()) {
+        dataCollector.startEpisode();
+        episodeStartTime = timeManager.getGameTime();
+        episodeFrameCount = 0;
+        std::cout << "[DEBUG] New episode started - Data collection ENABLED" << std::endl;
+    } else {
+        episodeStartTime = timeManager.getGameTime();
+        episodeFrameCount = 0;
+        std::cout << "[DEBUG] New episode started - Data collection DISABLED" << std::endl;
+    }
+
     return;
+}
+
+/**
+ * @brief 保存收集的数据
+ * @details 将训练数据保存到文件，包括二进制数据和CSV格式
+ */
+void Game::saveCollectedData() {
+    int totalEpisodes = dataCollector.getTotalEpisodes();
+    if (totalEpisodes == 0) {
+        std::cout << "[DEBUG] No episodes to save" << std::endl;
+        return;
+    }
+    
+    int successfulEpisodes = dataCollector.getSuccessfulEpisodes();
+    float successRate = dataCollector.getSuccessRate();
+    
+    std::cout << "[DEBUG] Saving collected data..." << std::endl;
+    std::cout << "[DEBUG] Total episodes collected: " << totalEpisodes << std::endl;
+    std::cout << "[DEBUG] Successful episodes: " << successfulEpisodes << std::endl;
+    std::cout << "[DEBUG] Success rate: " << (successRate * 100) << "%" << std::endl;
+    
+    std::string basePath;
+    if (rlTrainingMode) {
+        basePath = "D:\\steam\\steamapps\\common\\Noita\\mods\\NoitaCoreAI\\aiDev\\data\\rl_training\\";
+    } else {
+        basePath = "D:\\steam\\steamapps\\common\\Noita\\mods\\NoitaCoreAI\\aiDev\\data\\";
+    }
+    
+    dataCollector.saveEpisodeData(basePath + "collected_data.bin");
+    dataCollector.exportTrainingDataset(basePath + "training_dataset.csv");
+    
+    std::cout << "[DEBUG] Data saved to " << basePath << "collected_data.bin and " << basePath << "training_dataset.csv" << std::endl;
 }
 
 /**
@@ -242,50 +461,54 @@ void Game::resetLevel() {
  */
 void Game::run() {
     sf::Clock clock;
-    fpsClock.restart();
-    gameClock.restart();
 
     while (window.isMainWindowOpen()) {
         // 处理窗口事件
         window.handleEvents();
         
-        // 处理键盘输入 - F键暂停/继续
+        // 更新时间管理器
+        timeManager.update();
+
+        // 处理键盘输入 - F键暂停/继续，P键切换AI模式
         static bool fPressed = false;
+        static bool pPressed = false;
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::F)) {
             if (!fPressed) {
                 paused = !paused;
+                timeManager.setPaused(paused);
                 fPressed = true;
             }
         } else {
             fPressed = false;
         }
         
-
-        // 更新FPS计数器
-    frameCount++;
-    if (fpsClock.getElapsedTime().asSeconds() >= 1.0f) {
-        fps = frameCount / fpsClock.restart().asSeconds();  // 计算FPS(帧数/秒)
-        frameCount = 0;                                    // 重置帧计数器
-        fpsText.setString("FPS: " + std::to_string(static_cast<int>(fps)));
-    }
-
-        // 更新游戏时间(排除暂停时间)
-    if (!paused) {
-        gameTime = gameClock.getElapsedTime().asSeconds() - totalPausedTime;
-    }
-    timerText.setString("Time: " + std::to_string(static_cast<int>(gameTime)) + "s");
+        // P键切换AI控制模式
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::P)) {
+            if (!pPressed) {
+                aiMode = !aiMode;
+                std::cout << "[AI] AI control mode: " << (aiMode ? "ENABLED" : "DISABLED") << std::endl;
+                pPressed = true;
+            }
+        } else {
+            pPressed = false;
+        }
 
         // 游戏逻辑更新控制
-        float dt = clock.restart().asSeconds();  // 获取自上次循环以来的时间增量
+    float dt = timeManager.getDeltaTime();
+    
+    if (!timeManager.isPaused()) {
+        handleInput(dt);  // 处理用户输入
+        update(dt);       // 更新游戏状态
         
-        if (dt > fixedTimeStep) {
-            dt = fixedTimeStep;
+        // 强化学习训练模式下，每8秒强制重启游戏
+        if (rlTrainingMode) {
+            float currentGameTime = timeManager.getGameTime() - episodeStartTime;
+            if (currentGameTime >= 8.0f) {
+                std::cout << "[RL TRAINING] 8秒时间到，强制重启游戏" << std::endl;
+                resetLevel();
+            }
         }
-        
-        if (!paused) {
-            handleInput(dt);  // 处理用户输入
-            update(dt);       // 更新游戏状态
-        }
+    }
 
         render();
     }

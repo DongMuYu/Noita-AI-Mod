@@ -22,6 +22,9 @@
     <ClCompile Include="D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\core\Renderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\core\Time.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\entity\Player.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -35,6 +38,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\ai\pathfinding\RayCasting.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\ai\controller\AIController.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\ai\controller\DataCollector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\ai\trainer\RLTrainer\RLTrainer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\ai\trainer\SLTrainer\SLTrainer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="D:\steam\steamapps\common\Noita\mods\NoitaCoreAI\aiDev\src\scene\GameScene.cpp">

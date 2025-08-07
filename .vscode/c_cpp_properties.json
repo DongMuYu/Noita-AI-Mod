@@ -16,6 +16,10 @@
                 "${workspaceFolder}/**",
                 // SFML
                 "D:/Libraries/SFML-2.5.1/include/**",
+
+                // PyTorch
+                "D:/Libraries/libtorch/include/**",
+                "D:/Libraries/libtorch/include/torch/csrc/api/include/**",
                 
                 "E:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/../../../../include/c++/14.2.0",
                 "E:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/../../../../include/c++/14.2.0/x86_64-w64-mingw32",

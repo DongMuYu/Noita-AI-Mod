@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18)
 project(aiDev)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 设置SFML路径
@@ -23,24 +23,28 @@ add_executable(${PROJECT_NAME}
     src/core/UI.cpp
     src/core/Map.cpp
     src/core/Renderer.cpp
-    # src/core/Resource.cpp
-    # src/core/Level.cpp
-    # src/core/Time.cpp
+    src/core/Time.cpp
     src/entity/Player.cpp
     src/entity/Enemy.cpp
     src/entity/Bullet.cpp
     src/physics/Collision.cpp
     src/ai/pathfinding/RayCasting.cpp
 
+    src/ai/controller/AIController.cpp  
+    src/ai/controller/DataCollector.cpp
+    src/ai/trainer/RLTrainer/RLTrainer.cpp
+    src/ai/trainer/SLTrainer/SLTrainer.cpp
+
     src/scene/GameScene.cpp
     src/world/Parser.cpp
 )
 
-# 链接SFML库
+# 链接库
 target_link_libraries(${PROJECT_NAME} PRIVATE
     sfml-graphics
     sfml-window
     sfml-system
+    ${TORCH_LIBRARIES}
 )
 
 # 定义资源目录

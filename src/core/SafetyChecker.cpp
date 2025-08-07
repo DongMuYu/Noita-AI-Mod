@@ -174,8 +174,8 @@ bool SafetyChecker::isOnValidGround(const Entity& entity,
     int rightGridX = static_cast<int>((bounds.left + bounds.width - 1) / TILE);
     int bottomGridY = static_cast<int>((bounds.top + bounds.height - 1) / TILE);
     
-    int actualWidth = levelData[0].size();
-    int actualHeight = levelData.size();
+    int actualWidth = static_cast<int>(levelData[0].size());
+        int actualHeight = static_cast<int>(levelData.size());
     
     // 检查实体覆盖的所有网格位置
     for (int gridX = leftGridX; gridX <= rightGridX; ++gridX) {

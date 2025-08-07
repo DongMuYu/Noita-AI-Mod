@@ -3,17 +3,21 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <vector>
+#include <memory>
 #include "../entity/Player.h"
 #include "../physics/Collision.h"
 #include "../ai/pathfinding/RayCasting.h"
 
 #include "Renderer.h"
 #include "SafetyChecker.h"
+#include "Time.h"
 
 #include "Window.h"
 #include "UI.h"
 #include "Map.h"
 #include "Constants.h"
+#include "../ai/controller/DataCollector.h"
+#include "../ai/controller/AIController.h"
 
 /**
  * @brief 游戏主控制器类
@@ -31,29 +35,8 @@ private:
     /** @brief 玩家初始出生位置 */
     sf::Vector2f playerSpawnPosition;
     
-    /** @brief 计时系统 - 游戏总时钟 */
-    sf::Clock gameClock;
-    
-    /** @brief 计时系统 - FPS计算时钟 */
-    sf::Clock fpsClock;
-    
-    /** @brief 暂停开始时间 */
-    sf::Time pauseStartTime;
-    
-    /** @brief 总暂停时间（秒） */
-    float totalPausedTime = 0.0f;
-    
-    /** @brief 帧计数器（用于FPS计算） */
-    int frameCount = 0;
-    
-    /** @brief 游戏运行时间（不包含暂停，秒） */
-    float gameTime = 0.f;
-    
-    /** @brief 当前FPS值 */
-    float fps = 0.f;
-
-    /** @brief 固定时间步长(60FPS) */
-    const float fixedTimeStep = 1.0f / 60.0f; 
+    /** @brief 时间管理器 */
+    TimeManager timeManager; 
     
     /** @brief 计时器文本对象 */
     sf::Text timerText;
@@ -87,6 +70,30 @@ private:
 
     /** @brief 渲染器对象 */
     Renderer renderer;
+    
+    /** @brief 数据收集器 */
+    DataCollector dataCollector;
+    
+    /** @brief AI控制器 */
+    AIController aiController;
+    
+    /** @brief AI控制模式开关 */
+    bool aiMode = false;
+    
+    /** @brief 强化学习训练模式开关 */
+    bool rlTrainingMode = false;
+    
+    /** @brief 当前回合开始时间 */
+    float episodeStartTime = 0.0f;
+    
+    /** @brief 当前回合帧计数 */
+    int episodeFrameCount = 0;
+    
+    /** @brief 游戏局数计数器 */
+    int totalGamesCount = 0;
+    
+    /** @brief 上一帧到目标的距离，用于计算奖励 */
+    float lastDistanceToTarget = 0.0f;
 
     /**
      * @brief 初始化游戏资源
@@ -124,6 +131,12 @@ private:
      * 重置玩家位置、计时器和所有游戏状态变量
      */
     void resetLevel();
+    
+    /**
+     * @brief 保存收集的数据到文件
+     * @details 将当前收集的所有episode数据保存到二进制和CSV文件
+     */
+    void saveCollectedData();
     
 public:
     /**

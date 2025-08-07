@@ -4,6 +4,7 @@
 #include "UI.h"
 #include "../entity/Player.h"
 #include "../core/Constants.h"
+#include "../world/Parser.h"
 #include <iostream>
 #include <set>
 
@@ -12,6 +13,7 @@ const sf::Color BACKGROUND_COLOR = sf::Color(100, 149, 237); // 天蓝色
 const sf::Color TARGET_COLOR = sf::Color::Red;
 const sf::Color PLAYER_SPAWN_COLOR = sf::Color(255, 255, 0); // 黄色
 const sf::Color DANGER_WARNING_COLOR = sf::Color(255, 0, 0); // 红色
+const sf::Color WALL_MARKER_COLOR = sf::Color(0, 255, 255); // 青色 - 墙标记颜色
 
 Renderer::Renderer() : initialized(false), playerInDanger(false), dangerTimer(0.0f) {
 }
@@ -113,6 +115,12 @@ void Renderer::setDangerState(bool isInDanger, float timer) {
 
 void Renderer::renderMap(sf::RenderWindow& window, Map& map) {
     map.draw(window);
+    
+    // 获取地图数据并渲染墙标记
+    const std::vector<std::string>& mapData = map.getLevelData();
+    if (!mapData.empty()) {
+        renderWallMarkers(window, map, mapData);
+    }
 }
 
 void Renderer::renderPlayer(sf::RenderWindow& window, Player& player, UI& ui) {
@@ -180,7 +188,7 @@ void Renderer::renderRayDebug(sf::RenderWindow& window,
             if (hit.hit) {
                 int tileX = static_cast<int>(hit.hitPoint.x / TILE);
                 int tileY = static_cast<int>(hit.hitPoint.y / TILE);
-                hitTiles.insert({tileX, tileY});
+                hitTiles.insert(std::make_pair(static_cast<int>(tileX), static_cast<int>(tileY)));
                 
                 // 绘制黄色命中点
                 sf::CircleShape hitPoint(3);
@@ -242,6 +250,34 @@ void Renderer::renderPlayerSpawnPoint(sf::RenderWindow& window, UI& ui, sf::Vect
     //     playerSpawnShape.setOutlineColor(sf::Color(255, 165, 0)); // 橙色边框
     //     playerSpawnShape.setOutlineThickness(2.0f);
     //     ui.renderShape(window, playerSpawnShape);
+    // }
+}
+
+void Renderer::renderWallMarkers(sf::RenderWindow& window, Map& map, const std::vector<std::string>& mapData) {
+    // if (mapData.empty()) return;
+    
+    // int width = mapData[0].size();
+    // int height = mapData.size();
+    
+    // // 创建半透明的青色矩形来标记墙
+    // sf::RectangleShape wallMarker(sf::Vector2f(TILE, TILE));
+    // wallMarker.setFillColor(sf::Color(WALL_MARKER_COLOR.r, WALL_MARKER_COLOR.g, WALL_MARKER_COLOR.b, 128)); // 半透明青色
+    // wallMarker.setOutlineThickness(1);
+    // wallMarker.setOutlineColor(WALL_MARKER_COLOR);
+    
+    // // 遍历地图数据，渲染'W', '3', '4'标记的墙结构
+    // for (int y = 0; y < height; ++y) {
+    //     for (int x = 0; x < width; ++x) {
+    //         if (mapData[y][x] == 'W' || mapData[y][x] == '3' || mapData[y][x] == '4') {
+    //             wallMarker.setPosition(x * TILE, y * TILE);
+    //             if (mapData[y][x] == '3' || mapData[y][x] == '4') {
+    //                 wallMarker.setFillColor(sf::Color(0, 0, 139, 128)); // 深蓝色半透明
+    //             } else {
+    //                 wallMarker.setFillColor(sf::Color(WALL_MARKER_COLOR.r, WALL_MARKER_COLOR.g, WALL_MARKER_COLOR.b, 128));
+    //             }
+    //             window.draw(wallMarker);
+    //         }
+    //     }
     // }
 }
 

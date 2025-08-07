@@ -4,6 +4,7 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <cmath>
+#include "../../core/Constants.h"
 
 /**
  * @brief 射线命中信息结构体
@@ -39,7 +40,7 @@ public:
      */
     std::vector<RayHitInfo> castRays(const sf::Vector2f& origin, 
                                    const std::vector<std::string>& levelData,
-                                   int raysPerQuadrant = 4);
+                                   int raysPerQuadrant = 16) const;
     
     /**
      * @brief 可视化射线投射结果（调试用）

@@ -51,28 +51,28 @@ void Map::draw(sf::RenderWindow& window)
             char c = levelData[y][x];  // 获取当前单元格的标识字符
             
             // 瓦片创建部分，根据字符创建不同类型的瓦片
-            // '1'表示创建固体瓦片(黑色方块)
-            if (c == '1') {
+            // '1'表示创建固体瓦片(黑色方块)  'W'表示创建墙瓦片(青色方块)  '3'表示创建墙顶瓦片(青色方块)  '4'表示创建墙底瓦片(青色方块)
+            if (c == '1' || c == 'W' || c == '3' || c == '4') {
                 // 创建瓦片对象，大小为TILE x TILE像素
-                sf::RectangleShape tile({(float)TILE, (float)TILE});
+                sf::RectangleShape tile({static_cast<float>(TILE), static_cast<float>(TILE)});
                 // 设置瓦片位置：网格坐标(x,y)转换为像素坐标
-                tile.setPosition(x * TILE, y * TILE);
+                tile.setPosition(static_cast<float>(x * TILE), static_cast<float>(y * TILE));
                 tile.setFillColor(sf::Color::Black);  // 设置瓦片颜色为黑色
                 tiles.emplace_back(tile);  // 添加到瓦片列表
             } 
             else if (c == 'M')
             {
                 // 创建被标记的瓦片
-                sf::RectangleShape tile({(float)TILE, (float)TILE});
-                tile.setPosition(x * TILE, y * TILE);
+                sf::RectangleShape tile({static_cast<float>(TILE), static_cast<float>(TILE)});
+                tile.setPosition(static_cast<float>(x * TILE), static_cast<float>(y * TILE));
                 tile.setFillColor(sf::Color::Red);  // 设置瓦片颜色为红色
                 tiles.emplace_back(tile);  // 添加到瓦片列表
             }
             else if (std::string("0PTEI").find(c) != std::string::npos)
             {
                 // 创建空白瓦片（用于渲染但排除碰撞）
-                sf::RectangleShape tile({(float)TILE, (float)TILE});
-                tile.setPosition(x * TILE, y * TILE);
+                sf::RectangleShape tile({static_cast<float>(TILE), static_cast<float>(TILE)});
+                tile.setPosition(static_cast<float>(x * TILE), static_cast<float>(y * TILE));
                 tile.setFillColor(sf::Color::Transparent);  // 透明标记 Transparent (暂时设定为黄色用于辨识)
                 tiles.emplace_back(tile);  // 添加到瓦片列表
             }

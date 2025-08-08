@@ -8,7 +8,45 @@
 #include <cmath>
 #include <sstream>
 
-AIController::AIController() : aiEnabled(false), modelLoaded(false), rng(std::random_device{}()) {
+// HistoryBuffer实现
+HistoryBuffer::HistoryBuffer() {
+    stateHistory.clear();
+    actionHistory.clear();
+}
+
+void HistoryBuffer::addState(const std::vector<float>& state) {
+    stateHistory.push_back(state);
+    if (stateHistory.size() > HISTORY_SIZE) {
+        stateHistory.pop_front();
+    }
+}
+
+void HistoryBuffer::addAction(const std::vector<float>& action) {
+    actionHistory.push_back(action);
+    if (actionHistory.size() > HISTORY_SIZE) {
+        actionHistory.pop_front();
+    }
+}
+
+std::vector<std::vector<float>> HistoryBuffer::getStateSequence() const {
+    return std::vector<std::vector<float>>(stateHistory.begin(), stateHistory.end());
+}
+
+std::vector<std::vector<float>> HistoryBuffer::getActionSequence() const {
+    return std::vector<std::vector<float>>(actionHistory.begin(), actionHistory.end());
+}
+
+bool HistoryBuffer::isFull() const {
+    return stateHistory.size() >= HISTORY_SIZE;
+}
+
+void HistoryBuffer::clear() {
+    stateHistory.clear();
+    actionHistory.clear();
+}
+
+AIController::AIController() : aiEnabled(false), modelLoaded(false),  rng(std::random_device{}()) {
+    historyBuffer = std::make_unique<HistoryBuffer>();
 }
 
 AIController::~AIController() {
@@ -35,6 +73,38 @@ AIController::Action AIController::decideAction(Player& player, Map& map, RayCas
     } catch (const std::exception& e) {
         std::cerr << "AI decision error: " << e.what() << std::endl;
         return getRandomAction();
+    }
+}
+
+// 包含原始数据返回的动作预测函数（用于调试）
+AIController::ActionResult AIController::decideActionWithDetails(Player& player, Map& map, RayCasting& rayCaster) {
+    if (!aiEnabled) {
+        // 如果AI未启用，返回默认动作
+        return AIController::ActionResult{{0, 0}, {0.0f, 0.0f}};
+    }
+
+    try {
+        // 提取当前帧特征
+        std::vector<float> features = extractFeatures(player, map, rayCaster);
+        
+        // 更新历史缓冲区
+        historyBuffer->addState(features);
+        
+        // 获取状态序列
+        auto stateSequence = historyBuffer->getStateSequence();
+        
+        // 根据配置选择预测方式
+        if (historyBuffer->isFull() && modelLoaded) {
+            // 使用序列学习模式
+            return predictSequenceAction(stateSequence);
+        } else {
+            // 使用传统单帧预测
+            return predictActionWithDetails(features);
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "AI decision error: " << e.what() << std::endl;
+        Action randomAction = getRandomAction();
+        return AIController::ActionResult{randomAction, {0.0f, 0.0f}};
     }
 }
 
@@ -122,9 +192,59 @@ std::vector<float> AIController::extractFeatures(const Player& player, Map& map,
     return features;
 }
 
+// 序列特征提取 - 扩展特征维度以包含时序信息
+std::vector<float> AIController::extractSequenceFeatures(const std::vector<std::vector<float>>& stateSequence) {
+    std::vector<float> sequenceFeatures;
+    
+    if (stateSequence.empty()) {
+        return std::vector<float>(132 * HISTORY_SIZE, 0.0f);
+    }
+    
+    // 为每帧添加扩展特征
+    for (const auto& frame : stateSequence) {
+        std::vector<float> extendedFrame = frame;
+        
+        // 添加时序特征：位置变化率、速度变化率
+        if (extendedFrame.size() >= 6) {
+            // 计算位置变化率 (需要历史数据)
+            extendedFrame.push_back(0.0f);  // dx/dt placeholder
+            extendedFrame.push_back(0.0f);  // dy/dt placeholder
+        }
+        
+        // 确保每帧有132个特征
+        while (extendedFrame.size() < 132) {
+            extendedFrame.push_back(0.0f);
+        }
+        
+        sequenceFeatures.insert(sequenceFeatures.end(), extendedFrame.begin(), extendedFrame.begin() + 132);
+    }
+    
+    // 填充到150帧
+    while (sequenceFeatures.size() < 132 * HISTORY_SIZE) {
+        sequenceFeatures.push_back(0.0f);
+    }
+    
+    return sequenceFeatures;
+}
+
 AIController::Action AIController::predictAction(const std::vector<float>& features) {
     if (modelWeights.empty() || modelBias.empty()) {
         return getRandomAction();
+    }
+    
+    try {
+        ActionResult result = predictActionWithDetails(features);
+        return result.action;
+    } catch (const std::exception& e) {
+        std::cerr << "Model prediction error: " << e.what() << std::endl;
+        return getRandomAction();
+    }
+}
+
+AIController::ActionResult AIController::predictActionWithDetails(const std::vector<float>& features) {
+    if (modelWeights.empty() || modelBias.empty()) {
+        Action randomAction = getRandomAction();
+        return ActionResult{randomAction, {0.0f, 0.0f}};
     }
     
     try {
@@ -142,13 +262,15 @@ AIController::Action AIController::predictAction(const std::vector<float>& featu
         // 验证输入维度
         if (features.size() != inputDim) {
             std::cerr << "Input feature dimension mismatch: " << features.size() << " vs " << inputDim << std::endl;
-            return getRandomAction();
+            Action randomAction = getRandomAction();
+            return ActionResult{randomAction, {0.0f, 0.0f}};
         }
         
         // 验证模型参数完整性（6层网络）
         if (modelWeights.size() < 6 || modelBias.size() < 6) {
             std::cerr << "Model parameters incomplete" << std::endl;
-            return getRandomAction();
+            Action randomAction = getRandomAction();
+            return ActionResult{randomAction, {0.0f, 0.0f}};
         }
         
         // 第一层：130 -> 256 (ReLU)
@@ -210,28 +332,30 @@ AIController::Action AIController::predictAction(const std::vector<float>& featu
             }
         }
         
-        // 调试输出：神经网络各层信息
-        std::cout << "[NN DEBUG] Model loaded: " << (modelLoaded ? "YES" : "NO") << std::endl;
-        std::cout << "[NN DEBUG] Output layer raw values: " << output[0] << ", " << output[1] << std::endl;
-        std::cout << "[NN DEBUG] Hidden5 layer sample values: ";
-        for (int i = 0; i < std::min(5, hiddenDim5); ++i) {
-            std::cout << hidden5[i] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "[NN DEBUG] Weights count: " << modelWeights.size() << ", Bias count: " << modelBias.size() << std::endl;
-        
-        // 输出原始预测值（不进行离散化处理）
+        // 创建包含原始数据和离散化动作的结果
         AIController::Action action;
+        AIController::OriginalActionData originalData;
+        originalData.moveX = output[0];
+        originalData.useEnergy = output[1];
         
-        // 直接使用神经网络的原始输出值
-        action.moveX = output[0];     // 原始预测值（连续值）
-        action.useEnergy = output[1]; // 原始预测值（连续值）
+        // 离散化 moveX 值，根据符号转换为 -1, 0 或 1
+        if (output[0] > 0.33f) {
+            action.moveX = 1;
+        } else if (output[0] < -0.33f) {
+            action.moveX = -1;
+        } else {
+            action.moveX = 0;
+        }
         
-        return action;
+        // 离散化 useEnergy 值，大于 0 则使用能量，否则不使用
+        action.useEnergy = (output[1] > 0.5f) ? 1 : 0;
+        
+        return ActionResult{action, originalData};
         
     } catch (const std::exception& e) {
         std::cerr << "Model prediction error: " << e.what() << std::endl;
-        return getRandomAction();
+        Action randomAction = getRandomAction();
+        return ActionResult{randomAction, {0.0f, 0.0f}};
     }
 }
 
@@ -241,6 +365,56 @@ AIController::Action AIController::getRandomAction() {
     
     return Action{moveDist(rng), energyDist(rng)};
 }
+
+// 基于序列预测动作
+AIController::ActionResult AIController::predictSequenceAction(const std::vector<std::vector<float>>& stateSequence) {
+    if (modelWeights.empty() || modelBias.empty()) {
+        Action randomAction = getRandomAction();
+        return ActionResult{randomAction, {0.0f, 0.0f}};
+    }
+    
+    try {
+        // 检查历史缓冲区是否已满
+        if (!historyBuffer->isFull()) {
+            // 使用传统方法作为后备
+            auto currentFeatures = stateSequence.empty() ? 
+                std::vector<float>(130, 0.0f) : stateSequence.back();
+            return predictActionWithDetails(currentFeatures);
+        }
+        
+        // 提取序列特征
+        std::vector<float> sequenceFeatures = extractSequenceFeatures(stateSequence);
+        
+        // 序列网络前向传播
+        // 网络结构: [150×132, LSTM256, LSTM128, 64, 32, 16, 2]
+        const int inputDim = 132 * 150;
+        const int lstm1Dim = 256;
+        const int lstm2Dim = 128;
+        const int hiddenDim3 = 64;
+        const int hiddenDim4 = 32;
+        const int hiddenDim5 = 16;
+        const int outputDim = 2;
+        
+        // 验证序列模型参数
+        if (modelWeights.size() < 12) {  // 序列网络需要更多参数
+            return predictActionWithDetails(stateSequence.back());
+        }
+        
+        // 简化的序列处理 - 使用现有权重结构
+        // 在实际应用中需要专门的LSTM权重加载
+        return predictActionWithDetails(stateSequence.back());
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Sequence prediction error: " << e.what() << std::endl;
+        Action randomAction = getRandomAction();
+        return ActionResult{randomAction, {0.0f, 0.0f}};
+    }
+}
+
+bool AIController::isAIEnabled() const {
+    return aiEnabled;
+}
+
 
 void AIController::loadModel(const std::string& filename) {
     try {
@@ -304,9 +478,6 @@ void AIController::loadModel(const std::string& filename) {
 
 void AIController::setAIEnabled(bool enabled) {
     aiEnabled = enabled;
-    std::cout << "AI control has been " << (enabled ? "enabled" : "disabled") << std::endl;
+    std::cout << "[DEBUG] AI " << (enabled ? "enabled" : "disabled") << std::endl;
 }
 
-bool AIController::isAIEnabled() const {
-    return aiEnabled;
-}

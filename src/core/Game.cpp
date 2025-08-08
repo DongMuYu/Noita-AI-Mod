@@ -69,7 +69,7 @@ Game::Game()
     std::cout << "[DEBUG] Data collection initialized and disabled" << std::endl;
     
     // 尝试加载已有的数据
-    std::string dataPath = "D:\\steam\\steamapps\\common\\Noita\\mods\\NoitaCoreAI\\aiDev\\data\\collected_data.bin";
+    std::string dataPath = "D:\\steam\\steamapps\\common\\Noita\\mods\\NoitaCoreAI\\aiDev\\data\\sequence_data\\collected_data.bin";
     if (std::filesystem::exists(dataPath)) {
         std::cout << "[DEBUG] Loading existing data from " << dataPath << std::endl;
         dataCollector.loadEpisodeData(dataPath);
@@ -147,12 +147,15 @@ void Game::handleInput(float dt) {
     // 检查是否由AI控制
     if (aiMode) {
         // 普通AI模式 - 使用已训练的模型
-        AIController::Action action = aiController.decideAction(player, map, rayCaster);
+        AIController::ActionResult result = aiController.decideActionWithDetails(player, map, rayCaster);
         
-        // 调试输出AI动作信息 - 输出原始模型预测值
-        std::cout << "Raw Model Output: " << action.moveX << " " << action.useEnergy << std::endl;    
+        // 调试输出AI动作信息（包含离散化和原始值）
+        std::cout << "AI Action - Discrete: [moveX=" << result.action.moveX 
+                  << ", useEnergy=" << result.action.useEnergy 
+                  << "] | Raw: [moveX=" << result.originalData.moveX 
+                  << ", useEnergy=" << result.originalData.useEnergy << "]" << std::endl;
         
-        player.handleInput(dt, true, action.moveX, action.useEnergy);
+        player.handleInput(dt, true, result.action.moveX, result.action.useEnergy);
     } else {
         player.handleInput(dt, false);
     }
@@ -407,7 +410,7 @@ void Game::saveCollectedData() {
     std::cout << "[DEBUG] Successful episodes: " << successfulEpisodes << std::endl;
     std::cout << "[DEBUG] Success rate: " << (successRate * 100) << "%" << std::endl;
     
-    std::string basePath = "D:\\steam\\steamapps\\common\\Noita\\mods\\NoitaCoreAI\\aiDev\\data\\";
+    std::string basePath = "D:\\steam\\steamapps\\common\\Noita\\mods\\NoitaCoreAI\\aiDev\\data\\sequence_data\\";
     
     dataCollector.saveEpisodeData(basePath + "collected_data.bin");
     dataCollector.exportTrainingDataset(basePath + "training_dataset.csv");

@@ -1,4 +1,4 @@
-#include "SLTrainer/SLTrainer.h"
+#include "SLTrainer.h"
 #include <iostream>
 #include <vector>
 #include <string>

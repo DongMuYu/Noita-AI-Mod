@@ -163,23 +163,25 @@ void DataCollector::endEpisode(bool success, float gameDuration, float averageFP
 
 // 保存所有局数据到文件
 void DataCollector::saveEpisodeData(const std::string& filename) {
-    std::cout << "[DEBUG] Saving episode data to: " << filename << std::endl;
+    // 构建新的文件路径，将数据保存到sequence_data子文件夹
+    std::string newFilename = "D:\\steam\\steamapps\\common\\Noita\\mods\\NoitaCoreAI\\aiDev\\data\\sequence_data\\" + std::filesystem::path(filename).filename().string();
+    std::cout << "[DEBUG] Saving episode data to: " << newFilename << std::endl;
     
     // 确保目录存在 - 创建必要的文件夹
-    std::filesystem::create_directories(std::filesystem::path(filename).parent_path());
+    std::filesystem::create_directories(std::filesystem::path(newFilename).parent_path());
     
     // 使用追加模式打开文件，避免覆盖原有数据 - 增量保存
-    std::ofstream file(filename, std::ios::app);
+    std::ofstream file(newFilename, std::ios::app);
     if (!file.is_open()) {
-        std::cerr << "[ERROR] Failed to open file: " << filename << std::endl;
-        std::cerr << "[ERROR] Current working directory: " << std::filesystem::current_path() << std::endl;
-        std::cerr << "[ERROR] Please check if directory exists and has write permissions" << std::endl;
-        return;
-    }
+          std::cerr << "[ERROR] Failed to open file: " << newFilename << std::endl;
+          std::cerr << "[ERROR] Current working directory: " << std::filesystem::current_path() << std::endl;
+          std::cerr << "[ERROR] Please check if directory exists and has write permissions" << std::endl;
+          return;
+      }
     
     // 获取已保存的游戏局数（用于跳过已保存的数据） - 避免重复保存
     int startEpisodeId = 0;
-    std::ifstream checkFile(filename);
+    std::ifstream checkFile(newFilename);
     if (checkFile.is_open()) {
         std::string line;
         while (std::getline(checkFile, line)) {
@@ -250,9 +252,11 @@ void DataCollector::saveEpisodeData(const std::string& filename) {
 
 // 从文件加载数据
 void DataCollector::loadEpisodeData(const std::string& filename) {
-    std::ifstream file(filename);
+    // 构建新的文件路径，从sequence_data子文件夹加载数据
+    std::string newFilename = "D:\\steam\\steamapps\\common\\Noita\\mods\\NoitaCoreAI\\aiDev\\data\\sequence_data\\" + std::filesystem::path(filename).filename().string();
+    std::ifstream file(newFilename);
     if (!file.is_open()) {
-        std::cerr << "Failed to open file: " << filename << std::endl;
+        std::cerr << "Failed to open file: " << newFilename << std::endl;
         return;
     }
     
@@ -290,7 +294,7 @@ void DataCollector::loadEpisodeData(const std::string& filename) {
     file.clear();
     file.seekg(0);
     
-    std::cout << "[DEBUG] Loading data from: " << filename << std::endl;
+    std::cout << "[DEBUG] Loading data from: " << newFilename << std::endl;
     
     int loadedEpisodes = 0;
     int skippedEpisodes = 0;
@@ -366,17 +370,19 @@ void DataCollector::loadEpisodeData(const std::string& filename) {
 
 // 导出训练数据集为CSV格式
 void DataCollector::exportTrainingDataset(const std::string& filename) {
-    std::cout << "[DEBUG] Exporting training dataset to: " << filename << std::endl;
+    // 构建新的文件路径，将数据导出到sequence_data子文件夹
+    std::string newFilename = "D:\\steam\\steamapps\\common\\Noita\\mods\\NoitaCoreAI\\aiDev\\data\\sequence_data\\" + std::filesystem::path(filename).filename().string();
+    std::cout << "[DEBUG] Exporting training dataset to: " << newFilename << std::endl;
     
-    std::filesystem::create_directories(std::filesystem::path(filename).parent_path());
+    std::filesystem::create_directories(std::filesystem::path(newFilename).parent_path());
     
-    std::filesystem::path filePath(filename);
+    std::filesystem::path filePath(newFilename);
     bool fileExists = std::filesystem::exists(filePath);
     
     // 打开文件，存在则追加，不存在则创建
     std::ofstream file(filePath, fileExists ? std::ios::app : std::ios::out);
     if (!file.is_open()) {
-        std::cerr << "[ERROR] Failed to open file: " << filename << std::endl;
+        std::cerr << "[ERROR] Failed to open file: " << newFilename << std::endl;
         std::cerr << "[ERROR] Current working directory: " << std::filesystem::current_path() << std::endl;
         std::cerr << "[ERROR] Please check if directory exists and has write permissions" << std::endl;
         return;

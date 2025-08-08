@@ -34,6 +34,13 @@ public:
         Action action;
         bool terminal;
     };
+    
+    // 序列训练数据结构
+    struct SequenceTrainingData {
+        std::vector<TrainingData> sequence;  // 150帧序列
+        TrainingData target;                 // 目标动作
+        int sequenceLength = 150;
+    };
 
     // 单局游戏数据记录结构体
     struct EpisodeData {

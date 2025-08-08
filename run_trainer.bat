@@ -39,14 +39,14 @@ if not exist "%MODELS_DIR%\SL_models" (
 )
 
 REM Check training data
-if exist "%DATA_DIR%\training_dataset_reduced.csv" (
-    echo Found optimized training data: %DATA_DIR%\training_dataset_reduced.csv
-) else if exist "%DATA_DIR%\training_dataset.csv" (
-    echo Found training data: %DATA_DIR%\training_dataset.csv
+if exist "%DATA_DIR%\single_frame\training_dataset_reduced.csv" (
+    echo Found optimized training data: %DATA_DIR%\single_frame\training_dataset_reduced.csv
+) else if exist "%DATA_DIR%\single_frame\training_dataset.csv" (
+    echo Found training data: %DATA_DIR%\single_frame\training_dataset.csv
     echo Note: Consider using reduced dataset for faster training
 ) else (
     echo Warning: Training data file not found
-    echo Please copy training data file to: %DATA_DIR%\training_dataset_reduced.csv
+    echo Please copy training data file to: %DATA_DIR%\single_frame\training_dataset_reduced.csv
     echo Or run data processing script first
 )
 

@@ -210,20 +210,22 @@ AIController::Action AIController::predictAction(const std::vector<float>& featu
             }
         }
         
-        // 离散化输出
+        // 调试输出：神经网络各层信息
+        std::cout << "[NN DEBUG] Model loaded: " << (modelLoaded ? "YES" : "NO") << std::endl;
+        std::cout << "[NN DEBUG] Output layer raw values: " << output[0] << ", " << output[1] << std::endl;
+        std::cout << "[NN DEBUG] Hidden5 layer sample values: ";
+        for (int i = 0; i < std::min(5, hiddenDim5); ++i) {
+            std::cout << hidden5[i] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "[NN DEBUG] Weights count: " << modelWeights.size() << ", Bias count: " << modelBias.size() << std::endl;
+        
+        // 输出原始预测值（不进行离散化处理）
         AIController::Action action;
         
-        // 第一维（左右移动）：-1（左移），0（不动），1（右移）
-        if (output[0] < -0.5f) {
-            action.moveX = -1;
-        } else if (output[0] > 0.5f) {
-            action.moveX = 1;
-        } else {
-            action.moveX = 0;
-        }
-        
-        // 第二维（上下移动）：0（下降），1（上升/飞行）
-        action.useEnergy = (output[1] >= 0.5f) ? 1 : 0;
+        // 直接使用神经网络的原始输出值
+        action.moveX = output[0];     // 原始预测值（连续值）
+        action.useEnergy = output[1]; // 原始预测值（连续值）
         
         return action;
         

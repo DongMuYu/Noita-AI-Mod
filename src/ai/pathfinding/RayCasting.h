@@ -40,7 +40,7 @@ public:
      */
     std::vector<RayHitInfo> castRays(const sf::Vector2f& origin, 
                                    const std::vector<std::string>& levelData,
-                                   int raysPerQuadrant = 16) const;
+                                   int raysPerQuadrant = 15) const;
     
     /**
      * @brief 可视化射线投射结果（调试用）

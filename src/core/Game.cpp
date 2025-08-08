@@ -79,7 +79,7 @@ Game::Game()
     }
     
     // 初始化AI控制器并加载模型
-    aiController.loadModel("d:/steam/steamapps/common/Noita/mods/NoitaCoreAI/aiDev/models/trained_model.bin");
+    aiController.loadModel(AI_MODEL_PATH);
     std::cout << "[DEBUG] AI controller initialized and model loaded" << std::endl;
     
     // 初始化游戏局数计数器
@@ -149,11 +149,8 @@ void Game::handleInput(float dt) {
         // 普通AI模式 - 使用已训练的模型
         AIController::Action action = aiController.decideAction(player, map, rayCaster);
         
-        // 调试输出AI动作信息
-        std::cout << "[AI DEBUG] Move: " << std::fixed << std::setprecision(2) << action.moveX 
-                << " | Fly: (" << action.useEnergy << ")"
-                << " | Action_x: (" << action.moveX << ")"
-                << std::endl;    
+        // 调试输出AI动作信息 - 输出原始模型预测值
+        std::cout << "Raw Model Output: " << action.moveX << " " << action.useEnergy << std::endl;    
         
         player.handleInput(dt, true, action.moveX, action.useEnergy);
     } else {
@@ -197,25 +194,7 @@ void Game::handleInput(float dt) {
         bPressed = false;
     }
     
-    // 强化学习训练模式开关
-    static bool tPressed = false;
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::T)) {
-        if (!tPressed) {
-            rlTrainingMode = !rlTrainingMode;
-            
-            if (rlTrainingMode) {
-                // 开启训练模式 - 但不自动启用数据收集
-                std::cout << "[RL TRAINING] Training mode ENABLED" << std::endl;
-                std::cout << "[RL TRAINING] Use B key to enable data collection" << std::endl;
-            } else {
-                // 关闭训练模式
-                std::cout << "[RL TRAINING] Training mode DISABLED" << std::endl;
-            }
-            tPressed = true;
-        }
-    } else {
-        tPressed = false;
-    }
+
 }
 
 /**
@@ -331,15 +310,7 @@ void Game::render() {
                              showRayDebug, rayHits);
     
     // 显示AI模式状态
-    if (rlTrainingMode) {
-        sf::Text rlModeText;
-        rlModeText.setFont(renderer.getFont());
-        rlModeText.setString("RL TRAINING MODE");
-        rlModeText.setCharacterSize(20);
-        rlModeText.setFillColor(sf::Color::Magenta);
-        rlModeText.setPosition(10, 10);
-        mainWindowRef.draw(rlModeText);
-    } else if (aiMode) {
+    if (aiMode) {
         sf::Text aiModeText;
         aiModeText.setFont(renderer.getFont());
         aiModeText.setString("AI MODE ON");
@@ -436,12 +407,7 @@ void Game::saveCollectedData() {
     std::cout << "[DEBUG] Successful episodes: " << successfulEpisodes << std::endl;
     std::cout << "[DEBUG] Success rate: " << (successRate * 100) << "%" << std::endl;
     
-    std::string basePath;
-    if (rlTrainingMode) {
-        basePath = "D:\\steam\\steamapps\\common\\Noita\\mods\\NoitaCoreAI\\aiDev\\data\\rl_training\\";
-    } else {
-        basePath = "D:\\steam\\steamapps\\common\\Noita\\mods\\NoitaCoreAI\\aiDev\\data\\";
-    }
+    std::string basePath = "D:\\steam\\steamapps\\common\\Noita\\mods\\NoitaCoreAI\\aiDev\\data\\";
     
     dataCollector.saveEpisodeData(basePath + "collected_data.bin");
     dataCollector.exportTrainingDataset(basePath + "training_dataset.csv");
@@ -486,6 +452,7 @@ void Game::run() {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::P)) {
             if (!pPressed) {
                 aiMode = !aiMode;
+                aiController.setAIEnabled(aiMode);
                 std::cout << "[AI] AI control mode: " << (aiMode ? "ENABLED" : "DISABLED") << std::endl;
                 pPressed = true;
             }
@@ -499,15 +466,6 @@ void Game::run() {
     if (!timeManager.isPaused()) {
         handleInput(dt);  // 处理用户输入
         update(dt);       // 更新游戏状态
-        
-        // 强化学习训练模式下，每8秒强制重启游戏
-        if (rlTrainingMode) {
-            float currentGameTime = timeManager.getGameTime() - episodeStartTime;
-            if (currentGameTime >= 8.0f) {
-                std::cout << "[RL TRAINING] 8秒时间到，强制重启游戏" << std::endl;
-                resetLevel();
-            }
-        }
     }
 
         render();

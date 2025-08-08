@@ -434,18 +434,56 @@ std::vector<float> SLTrainer::BehaviorCloningAgent::forward(const std::vector<fl
     return forwardNetwork(state);
 }
 
+// 输入归一化
+std::vector<float> SLTrainer::BehaviorCloningAgent::normalizeInput(const std::vector<float>& input) {
+    std::vector<float> normalized = input;
+    
+    // 简单的归一化：将输入值缩放到[-1, 1]范围
+    // 这里假设输入特征的大致范围，可以根据实际数据调整
+    for (size_t i = 0; i < normalized.size(); ++i) {
+        // 位置特征归一化（假设范围在-1000到1000）
+        if (i < 2) { // x, y位置
+            normalized[i] = normalized[i] / 1000.0f;
+        }
+        // 速度特征归一化（假设范围在-10到10）
+        else if (i < 4) { // vx, vy速度
+            normalized[i] = normalized[i] / 10.0f;
+        }
+        // 距离特征归一化（假设范围在0到1000）
+        else if (i < 6) { // 距离相关特征
+            normalized[i] = normalized[i] / 1000.0f;
+        }
+        // 其他特征归一化
+        else {
+            normalized[i] = std::tanh(normalized[i]); // 使用tanh函数将值压缩到[-1, 1]
+        }
+    }
+    
+    return normalized;
+}
+
 // 离散化预测输出
 std::vector<float> SLTrainer::BehaviorCloningAgent::predict(const std::vector<float>& input) {
-    std::vector<float> output = forwardNetwork(input);
+    // 首先对输入进行归一化
+    std::vector<float> normalizedInput = normalizeInput(input);
+    std::vector<float> output = forwardNetwork(normalizedInput);
+    
+    // 调试输出：打印神经网络原始输出值
+    if (outputDim >= 1) {
+        printf("[AI DEBUG] Raw output[0]: %.6f\n", output[0]);
+    }
+    if (outputDim >= 2) {
+        printf("[AI DEBUG] Raw output[1]: %.6f\n", output[1]);
+    }
     
     // 离散化输出：确保输出是满足操控游戏的离散值
     // 第一维（左右移动）：-1（左移），0（不动），1（右移）
     // 第二维（上下移动）：0（下降），1（上升/飞行）
-    if (outputDim >= 1) {
-        // 第一维离散化
-        if (output[0] < -0.5f) {
+    /*if (outputDim >= 1) {
+        // 第一维离散化 - 进一步降低阈值以增加敏感性
+        if (output[0] < -0.1f) {
             output[0] = -1.0f;
-        } else if (output[0] > 0.5f) {
+        } else if (output[0] > 0.1f) {
             output[0] = 1.0f;
         } else {
             output[0] = 0.0f;
@@ -453,9 +491,9 @@ std::vector<float> SLTrainer::BehaviorCloningAgent::predict(const std::vector<fl
     }
     
     if (outputDim >= 2) {
-        // 第二维离散化
-        output[1] = (output[1] >= 0.5f) ? 1.0f : 0.0f;
-    }
+        // 第二维离散化 - 进一步降低阈值以增加敏感性
+        output[1] = (output[1] >= 0.1f) ? 1.0f : 0.0f;
+    }*/
     
     return output;
 }

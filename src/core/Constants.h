@@ -82,4 +82,11 @@ constexpr float MOVE_SPEED = 160.f;
  */
 constexpr float NODE_SPACING = 15.0f;
 
+/**
+ * @brief AI模型文件路径
+ * @details 当前使用的AI模型文件路径，便于统一管理和修改
+ * 使用中间版本模型进行测试和开发
+ */
+constexpr const char* AI_MODEL_PATH = "d:/steam/steamapps/common/Noita/mods/NoitaCoreAI/aiDev/models/SL_models/intermediate_model_epoch_20.bin";
+
 #endif // CONSTANTS_H

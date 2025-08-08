@@ -80,9 +80,6 @@ private:
     /** @brief AI控制模式开关 */
     bool aiMode = false;
     
-    /** @brief 强化学习训练模式开关 */
-    bool rlTrainingMode = false;
-    
     /** @brief 当前回合开始时间 */
     float episodeStartTime = 0.0f;
     

@@ -56,7 +56,7 @@ std::vector<RayHitInfo> RayCasting::castRays(const sf::Vector2f& origin,
         // 在象限内均匀分布射线角度
         for (int i = 0; i < raysPerQuadrant; ++i) {
             // 计算当前射线的角度（线性插值）
-            float angle = startAngle + (endAngle - startAngle) * i / (raysPerQuadrant - 1);
+            float angle = startAngle + (endAngle - startAngle) * i / (raysPerQuadrant);
             
             // 计算方向向量
             sf::Vector2f direction(std::cos(angle), std::sin(angle));

@@ -14,6 +14,15 @@
             "includePath": [
                 // 工作区
                 "${workspaceFolder}/**",
+
+                // CUDA
+                "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/include",
+                "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib",
+                "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.*/include",
+                "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.*/include",
+
+
+                
                 // SFML
                 "D:/Libraries/SFML-2.5.1/include/**",
 

@@ -93,10 +93,11 @@ void SequenceTrainer::trainFromSequences(const std::vector<SequenceEpisodeData>&
     int bestEpoch = 0;
     float bestValidationLoss = std::numeric_limits<float>::max();
     int patienceCounter = 0;
+    int epoch = 0; // 将epoch变量声明移到循环外部
     
     std::cout << "[DEBUG] Entering training loop..." << std::endl;
     
-    for (int epoch = 0; epoch < config.epochs; ++epoch) {
+    for (; epoch < config.epochs; ++epoch) {
         std::cout << "[DEBUG] Starting epoch " << epoch << "..." << std::endl;
         // 打乱训练数据
         std::shuffle(trainSet.begin(), trainSet.end(), std::mt19937{std::random_device{}()});

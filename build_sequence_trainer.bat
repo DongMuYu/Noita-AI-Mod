@@ -12,7 +12,7 @@ cd %BUILD_DIR%
 
 REM Configure CMake
 echo Configuring CMake...
-cmake -G "Visual Studio 17 2022" -A x64 ..\%SOURCE_DIR%
+cmake -G "Visual Studio 17 2022" -A x64 -DBUILD_SEQUENCE_TRAINER=ON -DBUILD_TRADITIONAL_TRAINER=OFF ..\%SOURCE_DIR%
 
 if errorlevel 1 (
     echo CMake configuration failed!
@@ -51,13 +51,9 @@ echo.
 echo Build completed successfully!
 echo.
 echo Available executables:
-echo   - bin\sl_trainer.exe (Traditional supervised learning)
 echo   - bin\sequence_trainer.exe (Sequence learning)
-echo   - bin\training_manager.exe (Hybrid training manager)
 echo.
 echo Usage:
-echo   - Traditional training: bin\sl_trainer.exe
 echo   - Sequence training: bin\sequence_trainer.exe
-echo   - Hybrid training: bin\training_manager.exe
 echo.
 pause

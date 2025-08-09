@@ -6,8 +6,12 @@
 #include <limits>
 #include <string>
 #include <deque>
-// 独立定义EpisodeData结构体，不再依赖SLTrainer
-namespace SimpleML {
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
+#include <cudnn.h>
+
+// 独立定义EpisodeData结构体，不依赖SLTrainer
+namespace CUDA_SLTrainer {
     /**
      * @brief 训练数据结构体
      * 存储单帧训练样本的数据
@@ -52,16 +56,16 @@ namespace SequenceML {
 }
 
 /**
- * @brief 序列学习训练器类
- * 实现基于LSTM的序列模型训练，用于学习时序决策模式
+ * @brief CUDA序列学习训练器类
+ * 实现基于CUDA加速的LSTM序列模型训练，用于学习时序决策模式
  */
-class SequenceTrainer {
+class CUDASequenceTrainer {
 public:
     /**
-     * @brief 序列训练配置结构体
+     * @brief CUDA序列训练配置结构体
      * 包含序列训练过程中的所有超参数配置
      */
-    struct SequenceTrainingConfig {
+    struct CUDASequenceTrainingConfig {
         int batchSize = 32;                ///< 批次大小
         int epochs = 1000;                 ///< 训练轮数
         float learningRate = 0.001f;       ///< 学习率
@@ -73,21 +77,24 @@ public:
         int denseHiddenSize = 64;          ///< 全连接隐藏层大小
         float dropoutRate = 0.2f;          ///< Dropout比率
         bool useLayerNorm = true;          ///< 是否使用层归一化
+        int gpuDeviceId = 0;               ///< GPU设备ID
+        bool useTensorCores = true;        ///< 是否使用Tensor Cores
+        int memoryPoolSize = 1024 * 1024 * 1024; ///< 内存池大小(1GB)
         
-        SequenceTrainingConfig() = default;
+        CUDASequenceTrainingConfig() = default;
     };
 
 public:
     /**
      * @brief 构造函数
-     * @param config 序列训练配置参数
+     * @param config CUDA序列训练配置参数
      */
-    SequenceTrainer(const SequenceTrainingConfig& config);
+    CUDASequenceTrainer(const CUDASequenceTrainingConfig& config);
     
     /**
      * @brief 析构函数
      */
-    virtual ~SequenceTrainer();
+    virtual ~CUDASequenceTrainer();
     
     /**
      * @brief 从序列数据训练模型
@@ -138,21 +145,21 @@ public:
                                    std::vector<SequenceML::SequenceTrainingData>& sequences);
     
     /**
-     * @brief 设置序列训练配置
+     * @brief 设置CUDA序列训练配置
      * @param config 新的配置
      */
-    void setSequenceConfig(const SequenceTrainingConfig& config);
+    void setCUDASequenceConfig(const CUDASequenceTrainingConfig& config);
     
     /**
-     * @brief 获取当前序列训练配置
+     * @brief 获取当前CUDA序列训练配置
      * @return 当前配置
      */
-    SequenceTrainingConfig getSequenceConfig() const;
+    CUDASequenceTrainingConfig getCUDASequenceConfig() const;
     
     /**
-     * @brief 序列训练统计信息
+     * @brief CUDA序列训练统计信息
      */
-    struct SequenceTrainingStats {
+    struct CUDASequenceTrainingStats {
         float trainingLoss;           ///< 训练损失
         float validationLoss;         ///< 验证损失
         float sequenceAccuracy;       ///< 序列准确率
@@ -161,36 +168,50 @@ public:
         float bestValidationLoss;     ///< 最佳验证损失
         float actionAccuracy;         ///< 动作预测准确率
         float temporalConsistency;    ///< 时序一致性
+        float gpuMemoryUsage;         ///< GPU内存使用量(MB)
+        float trainingSpeedup;        ///< 相比CPU的训练加速比
         
-        SequenceTrainingStats() : 
+        CUDASequenceTrainingStats() : 
             trainingLoss(0.0f), validationLoss(0.0f), sequenceAccuracy(0.0f),
             epochsCompleted(0), bestEpoch(0), bestValidationLoss(std::numeric_limits<float>::max()),
-            actionAccuracy(0.0f), temporalConsistency(0.0f) {}
+            actionAccuracy(0.0f), temporalConsistency(0.0f), gpuMemoryUsage(0.0f), trainingSpeedup(1.0f) {}
     };
     
     /**
-     * @brief 获取序列训练统计信息
+     * @brief 获取CUDA序列训练统计信息
      * @return 训练统计信息
      */
-    SequenceTrainingStats getSequenceTrainingStats() const;
+    CUDASequenceTrainingStats getCUDASequenceTrainingStats() const;
+    
+    /**
+     * @brief 获取GPU信息
+     * @return GPU设备信息字符串
+     */
+    std::string getGPUInfo() const;
+    
+    /**
+     * @brief 检查CUDA状态
+     * @return CUDA状态是否正常
+     */
+    bool checkCUDAStatus() const;
 
 private:
     /**
-     * @brief LSTM序列模型类
-     * 实现LSTM序列神经网络
+     * @brief CUDA LSTM序列模型类
+     * 实现基于CUDA加速的LSTM序列神经网络
      */
-    class LSTMSequenceModel {
+    class CUDALSTMSequenceModel {
     public:
         /**
          * @brief 构造函数
-         * @param config 序列训练配置
+         * @param config CUDA序列训练配置
          */
-        LSTMSequenceModel(const SequenceTrainingConfig& config);
+        CUDALSTMSequenceModel(const CUDASequenceTrainingConfig& config);
         
         /**
          * @brief 析构函数
          */
-        ~LSTMSequenceModel();
+        ~CUDALSTMSequenceModel();
         
         /**
          * @brief 前向传播
@@ -244,43 +265,85 @@ private:
          */
         void setParameters(const std::vector<float>& params);
         
+        /**
+         * @brief 获取GPU内存使用情况
+         * @return 内存使用量(MB)
+         */
+        float getGPUMemoryUsage() const;
+        
     private:
-        SequenceTrainingConfig config;
+        CUDASequenceTrainingConfig config;
         
-        // LSTM权重和偏置
-        std::vector<std::vector<float>> lstm1Weights;      ///< 第一层LSTM权重
-        std::vector<std::vector<float>> lstm1Biases;     ///< 第一层LSTM偏置
-        std::vector<std::vector<float>> lstm2Weights;      ///< 第二层LSTM权重
-        std::vector<std::vector<float>> lstm2Biases;     ///< 第二层LSTM偏置
+        // CUDA设备句柄
+        cudaStream_t stream;
+        cublasHandle_t cublasHandle;
+        cudnnHandle_t cudnnHandle;
         
-        // 全连接层权重和偏置
-        std::vector<std::vector<float>> denseWeights;      ///< 全连接层权重
-        std::vector<float> denseBiases;       ///< 全连接层偏置
+        // CUDA内存指针
+        float* d_lstm1Weights;      ///< 第一层LSTM权重(GPU)
+        float* d_lstm1Biases;     ///< 第一层LSTM偏置(GPU)
+        float* d_lstm2Weights;      ///< 第二层LSTM权重(GPU)
+        float* d_lstm2Biases;     ///< 第二层LSTM偏置(GPU)
+        float* d_denseWeights;      ///< 全连接层权重(GPU)
+        float* d_denseBiases;       ///< 全连接层偏置(GPU)
         
-        // 优化器状态
-        std::vector<std::vector<float>> adamM1, adamV1;    ///< 第一层LSTM优化器状态
-        std::vector<std::vector<float>> adamM2, adamV2;    ///< 第二层LSTM优化器状态
-        std::vector<std::vector<float>> adamMD, adamVD;    ///< 全连接层优化器状态
+        // LSTM状态(GPU)
+        float* d_hiddenState1;     ///< 第一层LSTM隐藏状态
+        float* d_cellState1;       ///< 第一层LSTM细胞状态
+        float* d_hiddenState2;     ///< 第二层LSTM隐藏状态
+        float* d_cellState2;       ///< 第二层LSTM细胞状态
+        
+        // 临时缓冲区
+        float* d_inputBuffer;      ///< 输入缓冲区
+        float* d_outputBuffer;     ///< 输出缓冲区
+        float* d_targetBuffer;     ///< 目标缓冲区
+        float* d_gradientBuffer;   ///< 梯度缓冲区
+        
+        // cuDNN描述符
+        cudnnTensorDescriptor_t inputDesc;
+        cudnnTensorDescriptor_t outputDesc;
+        cudnnTensorDescriptor_t hiddenDesc;
+        cudnnRNNDescriptor_t rnnDesc;
         
         std::mt19937 rng;                                ///< 随机数生成器
         
         /**
-         * @brief 初始化LSTM权重
+         * @brief 初始化CUDA设备
          */
-        void initializeLSTMWeights();
+        void initializeCUDA();
         
         /**
-         * @brief LSTM前向传播
+         * @brief 初始化CUDA内存
+         */
+        void initializeCUDAMemory();
+        
+        /**
+         * @brief 初始化cuDNN
+         */
+        void initializeCuDNN();
+        
+        /**
+         * @brief 释放CUDA资源
+         */
+        void releaseCUDAResources();
+        
+        /**
+         * @brief CUDA LSTM前向传播
          * @param input 输入序列
-         * @param hiddenState 隐藏状态
-         * @param cellState 细胞状态
          * @return 输出
          */
-        std::vector<float> lstmForward(const std::vector<float>& input,
-                                     std::vector<float>& hiddenState,
-                                     std::vector<float>& cellState,
-                                     const std::vector<std::vector<float>>& weights,
-                                     const std::vector<float>& biases);
+        std::vector<float> cudaLSTMForward(const std::vector<std::vector<float>>& input);
+        
+        /**
+         * @brief CUDA LSTM反向传播
+         * @param input 输入序列
+         * @param targets 目标值
+         * @param learningRate 学习率
+         * @return 损失值
+         */
+        float cudaLSTMBackward(const std::vector<std::vector<float>>& input,
+                              const std::vector<float>& targets,
+                              float learningRate);
         
         /**
          * @brief 计算损失
@@ -298,12 +361,33 @@ private:
          * @param fanOut 输出维度
          */
         void xavierInitialize(std::vector<float>& weights, int fanIn, int fanOut);
+        
+        /**
+         * @brief 检查CUDA错误
+         * @param error CUDA错误代码
+         * @param message 错误消息
+         */
+        void checkCUDAError(cudaError_t error, const std::string& message) const;
+        
+        /**
+         * @brief 检查cuBLAS错误
+         * @param error cuBLAS错误代码
+         * @param message 错误消息
+         */
+        void checkCUBLASError(cublasStatus_t error, const std::string& message) const;
+        
+        /**
+         * @brief 检查cuDNN错误
+         * @param error cuDNN错误代码
+         * @param message 错误消息
+         */
+        void checkCUDNNError(cudnnStatus_t error, const std::string& message) const;
     };
 
 private:
-    SequenceTrainingConfig config;                          ///< 序列训练配置
-    std::unique_ptr<LSTMSequenceModel> sequenceModel;        ///< 序列模型实例
-    SequenceTrainingStats stats;                             ///< 序列训练统计信息
+    CUDASequenceTrainingConfig config;                          ///< CUDA序列训练配置
+    std::unique_ptr<CUDALSTMSequenceModel> cudaSequenceModel;    ///< CUDA序列模型实例
+    CUDASequenceTrainingStats stats;                             ///< CUDA序列训练统计信息
     
     /**
      * @brief 预处理序列状态数据
@@ -358,4 +442,9 @@ private:
      * @return 时序一致性得分
      */
     float computeTemporalConsistency(const std::vector<std::vector<float>>& predictions);
+    
+    /**
+     * @brief 更新GPU内存使用统计
+     */
+    void updateGPUMemoryStats();
 };

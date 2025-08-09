@@ -18,7 +18,7 @@ cd /d "%BUILD_DIR%"
 
 REM Configure CMake
 echo Configuring CMake...
-cmake -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=%PROJECT_ROOT%bin -S "%TRAINER_DIR%" -B .
+cmake -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=%PROJECT_ROOT%bin -DBUILD_SEQUENCE_TRAINER=OFF -DBUILD_TRADITIONAL_TRAINER=ON -S "%TRAINER_DIR%" -B .
 
 if %errorlevel% neq 0 (
     echo CMake configuration failed!
@@ -41,5 +41,11 @@ echo === Build Complete ===
 echo Executable location: %PROJECT_ROOT%bin\sl_trainer.exe
 echo Data directory: %PROJECT_ROOT%data
 echo Models directory: %PROJECT_ROOT%models
+echo.
+echo Available executables:
+echo   - bin\sl_trainer.exe (Traditional supervised learning)
+echo.
+echo Usage:
+echo   - Traditional training: bin\sl_trainer.exe
 echo.
 pause

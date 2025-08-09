@@ -1,5 +1,4 @@
 #include "SequenceTrainer.h"
-#include "TrainingManager.h"
 #include <iostream>
 #include <vector>
 #include <string>
